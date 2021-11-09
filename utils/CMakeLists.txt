@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 # opencv
 set(OpenCV_DIR /usr/local/share/OpenCV)
+message("asd" ${OpenCV_INCLUDE_DIRS})
 find_package(OpenCV REQUIRED)
 
 #ncnn
@@ -20,27 +21,9 @@ include_directories(NCNN_INCLUDE_DIRS)
 find_package(ncnn REQUIRED)
 
 
-#set(ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/)
-#file(GLOB file ${ROOT_DIR}/sample/*)
-#add_executable(${PROJECT_NAME} main.cpp ${file})
-
-# generate readme of sample for API
-#add_library(yolov3ncnn SHARED main.cpp)
-#target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
-#target_link_libraries(
-#        yolov3ncnn
-#        ncnn
-#
-#        )
 # 搜索本目录搜索源码并赋值给变量
 aux_source_directory(. DIR_LIB_SRCS)
 
 
-# 添加库文件
-add_executable(yolov3 ${DIR_LIB_SRCS})
 
-
-# 链接动态库
-target_link_libraries(yolov3 yolov3_ncnn ${OpenCV_LIBS})
-
-#add_executable(yolov3_ncnn1 sample/main.cpp sample/utils/yolov3.cpp sample/utils/yolov3.h)
+add_library(${PROJECT_NAME} SHARED ${DIR_LIB_SRCS})
