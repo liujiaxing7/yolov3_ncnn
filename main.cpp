@@ -1,6 +1,9 @@
 #include <iostream>
-#include "utils/yolov3.h"
+
+#include "utils/detector.h"
+#include "utils/detector_inner.h"
 #include "utils/utils.h"
+#include <unistd.h>
 #if defined(USE_NCNN_SIMPLEOCV)
 #include "simpleocv.h"
 #else
@@ -11,7 +14,6 @@
 #include <vector>
 
 int main(int argc, char** argv)
-//int main()
 {
 
     if (argc != 2)
@@ -19,11 +21,12 @@ int main(int argc, char** argv)
         fprintf(stderr, "Usage: %s [imagepath]\n", argv[0]);
         return -1;
     }
-  const char* imagepath = argv[1];
 
     std::string inputDir = argv[1];
-//    std::string inputDir = "/home/fandong/images";
-    std::string imagesTxt = inputDir + "/sub.txt";
+    Detector *detector = Create();
+
+
+    std::string imagesTxt = inputDir + "/image.txt";
     std::vector<std::string> imageNameList;
     std::vector<std::string> lidarNameList;
 
@@ -31,6 +34,7 @@ int main(int argc, char** argv)
     const size_t size = imageNameList.size();
     printf("size:\n",size);
 
+    std::vector<Box> objects1;
     for (size_t i = 0; i < size; ++i) {
 
         auto imageName = imageNameList.at(i);
@@ -43,8 +47,10 @@ int main(int argc, char** argv)
             return -1;
         }
 
-        std::vector<Object> objects;
-        detect_yolov3(m, objects);
+        std::vector<Box> objects;
+        detector->GetDetectorResult(m,objects);
+//        detect_yolov3(m, objects);
+//        objects1.push_back(objects);
 
 
 //        draw_objects(m, objects);
