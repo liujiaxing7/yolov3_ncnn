@@ -32,23 +32,34 @@ int main(int argc, char** argv)
 
     ReadFile(imagesTxt, imageNameList);
     const size_t size = imageNameList.size();
-    printf("size:\n",size);
 
-    std::vector<Box> objects1;
+    std::vector<Box> boxes;
     for (size_t i = 0; i < size; ++i) {
 
         auto imageName = imageNameList.at(i);
-        std::string imagePath(inputDir + "/" + imageName);
+        std::string imagePath1( imageName);
+        char *imagePath= const_cast<char *>(imagePath1.data());
+//        char *labelPath=imagePath.replace(imagePath.find("JPEGImages"), 3, "labels");
+        char labelpath[4096];
+        replace_image_to_label(imagePath, labelpath);
 
-        cv::Mat m = cv::imread(imagePath, 1);
+        cv::Mat m = cv::imread(imagePath1, 1);
 
         if (m.empty()) {
             fprintf(stderr, "cv::imread %s failed\n", imageName.c_str());
             return -1;
         }
 
-        std::vector<Box> objects;
-        detector->GetDetectorResult(m,objects);
+        std::vector<Box> box;
+        detector->GetDetectorResult(m,box);
+
+        int nums_labels=0;
+        box_label * truth=read_boxes(labelpath,&nums_labels);
+
+        detector->validate_detector_map(box,truth,0.5,0.5,0);
+        printf(" ");
+
+
 //        detect_yolov3(m, objects);
 //        objects1.push_back(objects);
 
