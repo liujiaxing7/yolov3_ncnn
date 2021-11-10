@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.0.0)
 set(PROJECT_NAME yolov3_ncnn)
 project(${PROJECT_NAME} VERSION 1.1.3)
 
@@ -19,22 +19,11 @@ set(NCNN_INCLUDE_DIRS "/home/fandong/Code/ncnn/build22/install/include/ncnn")
 include_directories(NCNN_INCLUDE_DIRS)
 find_package(ncnn REQUIRED)
 
-
-#set(ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/)
-#file(GLOB file ${ROOT_DIR}/sample/*)
-#add_executable(${PROJECT_NAME} main.cpp ${file})
-
-# generate readme of sample for API
-#add_library(yolov3ncnn SHARED main.cpp)
-#target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
-#target_link_libraries(
-#        yolov3ncnn
-#        ncnn
-#
-#        )
 # 搜索本目录搜索源码并赋值给变量
 aux_source_directory(. DIR_LIB_SRCS)
+aux_source_directory(./utils DIR_LIB_SRCS1)
 
+add_library(yolov3_ncnn SHARED ${DIR_LIB_SRCS1})
 
 # 添加库文件
 add_executable(yolov3 ${DIR_LIB_SRCS})
