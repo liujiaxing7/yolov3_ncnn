@@ -42,8 +42,8 @@ static int detect_yolov3(const cv::Mat& bgr, std::vector<Object>& objects)
     // param : https://drive.google.com/open?id=1V9oKHP6G6XvXZqhZbzNKL6FI_clRWdC-
     // bin : https://drive.google.com/open?id=1DBcuFCr-856z3FRQznWL_S5h-Aj3RawA
     // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
-    yolov3.load_param("mobilenetv2_yolov3.param");
-    yolov3.load_model("mobilenetv2_yolov3.bin");
+    yolov3.load_param("../mobilenetv2_yolov3.param");
+    yolov3.load_model("../mobilenetv2_yolov3.bin");
     load_end=clock();
 
     printf("load_model %f seconds\n", difftime(load_end,load_start)/ CLOCKS_PER_SEC );
@@ -141,7 +141,7 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
     }
 
     cv::imshow("image", image);
-    cv::waitKey(0);
+    cv::waitKey(10);
 }
 
 
