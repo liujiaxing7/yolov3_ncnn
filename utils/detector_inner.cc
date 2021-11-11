@@ -3,6 +3,7 @@
 //#include "utils/timer.h"
 
 #include "net.h"
+#include "iostream"
 #include "utils.h"
 
 #if defined(USE_NCNN_SIMPLEOCV)
@@ -19,7 +20,7 @@
 #include <vector>
 #include "time.h"
 
-typedef struct detection {
+typedef struct detection{
     Box bbox;
     int classes;
     float *prob;
@@ -34,32 +35,49 @@ typedef struct detection {
     int track_id;
 } detection;
 
-typedef struct {
-    Box b;
-    float p;
-    int class_id;
-    int image_index;
-    int truth_flag;
-    int unique_truth_index;
-} box_prob;
+
+
+float overlap(float x1, float w1, float x2, float w2)
+{
+    float l1 = x1 - w1/2;
+    float l2 = x2 - w2/2;
+    float left = l1 > l2 ? l1 : l2;
+    float r1 = x1 + w1/2;
+    float r2 = x2 + w2/2;
+    float right = r1 < r2 ? r1 : r2;
+    return right - left;
+}
+
+float box_intersection(Box a, Box b)
+{
+    float w = overlap(a.x, a.w, b.x, b.w);
+    float h = overlap(a.y, a.h, b.y, b.h);
+    if(w < 0 || h < 0) return 0;
+    float area = w*h;
+    return area;
+}
+
+float box_union(Box a, Box b)
+{
+    float i = box_intersection(a, b);
+    float u = a.w*a.h + b.w*b.h - i;
+    return u;
+}
+
+float box_iou(Box a, Box b)
+{
+    //return box_intersection(a, b)/box_union(a, b);
+
+    float I = box_intersection(a, b);
+    float U = box_union(a, b);
+    if (I == 0 || U == 0) {
+        return 0;
+    }
+    return I / U;
+}
+ncnn::Net yolov3;
 
 DetectorInner::DetectorInner() {
-}
-
-DetectorInner::~DetectorInner() {
-}
-
-bool DetectorInner::Init() {
-    return true;
-}
-
-bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<Box> &boxes) {
-    std::cout << "detect run." << std::endl;
-    clock_t load_start, load_end;
-
-    load_start = clock();
-    ncnn::Net yolov3;
-
     yolov3.opt.use_vulkan_compute = true;
 //    yolov3.register_custom_layer("DarknetActivation", Noop_layer_creator);
 //    net.register_custom_layer("DarknetActivation", ncnn::DarknetActivation_layer_creator);
@@ -71,9 +89,27 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<Box> &bo
     // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
     yolov3.load_param("../mobilenetv2_yolov3.param");
     yolov3.load_model("../mobilenetv2_yolov3.bin");
-    load_end = clock();
+}
 
-    printf("load_model %f seconds\n", difftime(load_end, load_start) / CLOCKS_PER_SEC);
+DetectorInner::~DetectorInner() {
+}
+
+bool DetectorInner::Init() {
+
+
+
+    return true;
+}
+
+bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes) {
+//    std::cout << "detect run." << std::endl;
+//    clock_t load_start, load_end;
+//
+//    load_start = clock();
+
+//    load_end = clock();
+
+//    printf("load_model %f seconds\n", difftime(load_end, load_start) / CLOCKS_PER_SEC);
 
 
     clock_t pretreat_start, pretreat_end;
@@ -90,7 +126,7 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<Box> &bo
     const float norm_vals[3] = {1 / 255.f, 1 / 255.f, 1 / 255.f};
     in.substract_mean_normalize(mean_vals, norm_vals);
     pretreat_end = clock();
-    printf("pre %f seconds\n", difftime(pretreat_end, pretreat_start) / CLOCKS_PER_SEC);
+//    printf("pre %f seconds\n", difftime(pretreat_end, pretreat_start) / CLOCKS_PER_SEC);
 
 
     clock_t forward_start, forward_end;
@@ -102,7 +138,8 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<Box> &bo
     ncnn::Mat out;
     ex.extract("output", out);
     forward_end = clock();
-    printf("forward %f seconds\n", difftime(forward_end, forward_start) / CLOCKS_PER_SEC);
+    printf( "Total Detection Time: %f Seconds\n", difftime(forward_end, forward_start) / CLOCKS_PER_SEC);
+
 
     //     printf("%d %d %d\n", out.w, out.h, out.c);
 
@@ -112,25 +149,29 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<Box> &bo
     for (int i = 0; i < out.h; i++) {
         const float *values = out.row(i);
 
-        Box box;
-        box.label = values[0];
-        box.prob = values[1];
-        box.rect.x = values[2] * img_w;
-        box.rect.y = values[3] * img_h;
-        box.rect.width = values[4] * img_w - box.rect.x;
-        box.rect.height = values[5] * img_h - box.rect.y;
+        box_prob box;
+        box.class_id = 0;
+        box.p = values[1];
+//      box.b.x = values[2] * img_w;
+//      box.b.y = values[3] * img_h;
+//      box.b.w = values[4] * img_w - box.b.x;
+//      box.b.h = values[5] * img_h - box.b.y;
+        box.b.x = values[2] ;
+        box.b.y = values[3] ;
+        box.b.w = values[4] - box.b.x;
+        box.b.h = values[5] - box.b.y;
 
         boxes.push_back(box);
     }
     back_end = clock();
-    printf("back(maybe no back) %f seconds\n", difftime(back_end, back_start) / CLOCKS_PER_SEC);
+//    printf("back(maybe no back) %f seconds\n", difftime(back_end, back_start) / CLOCKS_PER_SEC);
 
     return 0;
 
     return true;
 }
 
-int DetectorInner::detections_comparator(const void *pa, const void *pb) {
+int detections_comparator(const void *pa, const void *pb) {
     box_prob a = *(const box_prob *) pa;
     box_prob b = *(const box_prob *) pb;
     float diff = a.p - b.p;
@@ -139,19 +180,19 @@ int DetectorInner::detections_comparator(const void *pa, const void *pb) {
     return 0;
 }
 
-void DetectorInner::free_detections(detection *dets, int n)
-{
-    int i;
-    for (i = 0; i < n; ++i) {
-        free(dets[i].prob);
-        if (dets[i].uc) free(dets[i].uc);
-        if (dets[i].mask) free(dets[i].mask);
-        if (dets[i].embeddings) free(dets[i].embeddings);
-    }
-    free(dets);
-}
+//void free_detections(detection *dets, int n)
+//{
+//    int i;
+//    for (i = 0; i < n; ++i) {
+//        free(dets[i].prob);
+//        if (dets[i].uc) free(dets[i].uc);
+//        if (dets[i].mask) free(dets[i].mask);
+//        if (dets[i].embeddings) free(dets[i].embeddings);
+//    }
+//    free(dets);
+//}
 
-float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *truth, float thresh_calc_avg_iou,
+float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_label *truth1,int *nums_labels, float thresh_calc_avg_iou,
                                            const float iou_thresh, int map_points) {
 
     FILE *reinforcement_fd = NULL;
@@ -161,21 +202,15 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
 //    char **names = get_labels_custom(name_list, &names_size);
 //    char **names = get_labels_custom(name_list, &names_size);
     static const char* names[] = {
-        "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-        "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-        "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-        "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-        "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-        "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-        "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-        "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-        "hair drier", "toothbrush"
+        "person", "escalator", "escalator_handrails", "person_dummy","adad","asdad"
+
     };
     //定义一些超参数和阈值
     int classes = 6;
 
-    int m = boxes.size();
-    int i = 0;
+    int m =  boxes.size();
+//    int m= std::count(boxes.begin(),boxes.end());
+    int i0 = 0;
     int t;
 
     const float thresh = .005;
@@ -183,24 +218,24 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
     //const float iou_thresh = 0.5;
 
     int nthreads = 4;
-    int num_labels = 6;
+    int num_labels = classes;
 
-/*    load_args args = { 0 };
-    args.w = 416;
-    args.h = 416;
-    args.c = 3;
-    letter_box = net.letter_box;
-    if (letter_box) args.type = LETTERBOX_DATA;
-    else args.type = IMAGE_DATA;*/
+//    load_args args = { 0 };
+    int w = 416;
+    int h = 416;
+    int c = 3;
+//    letter_box = net.letter_box;
+//    if (letter_box) args.type = LETTERBOX_DATA;
+//    else args.type = IMAGE_DATA;*/
 
     //const float thresh_calc_avg_iou = 0.24;
     float avg_iou = 0;
     int tp_for_thresh = 0;
     int fp_for_thresh = 0;
 
-    //定义预测box和标签box
+  //定义预测box和标签box
     box_prob *detections = (box_prob *) xcalloc(1, sizeof(box_prob));
-    detection *dets=boxes;
+
     int detections_count = 0;
     int unique_truth_count = 0;
 
@@ -213,13 +248,16 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
     char **file_paths = (char **) xcalloc(m, 100);
 
     time_t start = time(0);
-    for (i = nthreads; i < m + nthreads; i += nthreads) {
-        fprintf(stderr, "\r\033[k%d", i);
+//    for (int i = nthreads; i < m + nthreads; i += nthreads) {
+//        fprintf(stderr, "\r\033[k%d", i);
+//
+//        for (t = 0; t < nthreads && i + t - nthreads < m; ++t) {
+//            const int image_index = i + t - nthreads;
+//            std::cout<<"hello"<<std::endl;
+//
+//        }}
 
-        for (t = 0; t < nthreads && i + t - nthreads < m; ++t) {
-            const int image_index = i + t - nthreads;
-
-            detections = boxes;
+//            detections = boxes;
 
             //if (l.embedding_size) set_track_id(dets, nboxes, thresh, l.sim_thresh, l.track_ciou_norm, l.track_history_size, l.dets_for_track, l.dets_for_show);
 
@@ -227,37 +265,36 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
 //            replace_image_to_label(path, labelpath);
 //            int num_labels = 0;
             //得到真实标签
-//            box_label *truth = read_boxes(labelpath, &num_labels);
+            box_label *truth = truth1;
 
             int j;
-            for (j = 0; j < num_labels; ++j) {
+            for (j = 0; j < *nums_labels; ++j) {
                 truth_classes_count[truth[j].id]++;
             }
-
             const int checkpoint_detections_count = detections_count;
 
             int i;
             for (i = 0; i < m; ++i) {
                 int class_id;
                 for (class_id = 0; class_id < classes; ++class_id) {
-                    float prob = dets[i].prob[class_id];
-                    if (prob > 0) {
+                    float prob = boxes[i].p;
+                    if (prob > 0 && boxes[i].class_id==class_id) {
                         detections_count++;
                         detections = (box_prob *) xrealloc(detections, detections_count * sizeof(box_prob));
-                        detections[detections_count - 1].b = dets[i].bbox;
+                        detections[detections_count - 1].b = boxes[i].b;
                         detections[detections_count - 1].p = prob;
-                        detections[detections_count - 1].image_index = image_index;
+                        detections[detections_count - 1].image_index = 0;
                         detections[detections_count - 1].class_id = class_id;
                         detections[detections_count - 1].truth_flag = 0;
                         detections[detections_count - 1].unique_truth_index = -1;
 
                         int truth_index = -1;
                         float max_iou = 0;
-                        for (j = 0; j < num_labels; ++j) {
+                        for (j = 0; j < *nums_labels; ++j) {
                             Box t = {truth[j].x, truth[j].y, truth[j].w, truth[j].h};
                             //printf(" IoU = %f, prob = %f, class_id = %d, truth[j].id = %d \n",
                             //    box_iou(dets[i].bbox, t), prob, class_id, truth[j].id);
-                            float current_iou = box_iou(dets[i].bbox, t);
+                            float current_iou = box_iou(boxes[i].b, t);
                             if (current_iou > iou_thresh && class_id == truth[j].id) {
                                 if (current_iou > max_iou) {
                                     max_iou = current_iou;
@@ -291,12 +328,14 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
                                 fp_for_thresh++;
                                 fp_for_thresh_per_class[class_id]++;
                             }
-                        }
+                        }}
+
                     }
-                }
+
             }
 
-            unique_truth_count += num_labels;
+
+            unique_truth_count += *nums_labels;
 
             //static int previous_errors = 0;
             //int total_errors = fp_for_thresh + (unique_truth_count - tp_for_thresh);
@@ -307,12 +346,12 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
             //sprintf(buff, "%s\n", path);
             //if(errors_in_this_image > 0) fwrite(buff, sizeof(char), strlen(buff), reinforcement_fd);
 
-            free_detections(dets, m);
+//            free_detections(dets, m);
 //            free(id);
 //            free_image(val[t]);
 //            free_image(val_resized[t]);
-        }
-    }
+
+
 
     //for (t = 0; t < nthreads; ++t) {
     //    pthread_join(thr[t], 0);
@@ -342,10 +381,12 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
     for (i = 0; i < classes; ++i) {
         pr[i] = (pr_t *) xcalloc(detections_count, sizeof(pr_t));
     }
-    printf("\n detections_count = %d, unique_truth_count = %d  \n", detections_count, unique_truth_count);
+
+//    printf("\n detections_count = %d, unique_truth_count = %d  \n", detections_count, unique_truth_count);
 
     int *detection_per_class_count = (int *) xcalloc(classes, sizeof(int));
     for (int j = 0; j < detections_count; ++j) {
+
         detection_per_class_count[detections[j].class_id]++;
     }
 
@@ -372,11 +413,11 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
                 pr[d.class_id][rank].tp++;    // true-positive
             } else {
                 pr[d.class_id][rank].fp++;
-                fprintf(fp_file, "fp: %s\n", paths[d.image_index]);
+//                fprintf(fp_file, "fp: %s\n", paths[d.image_index]);
             }
         } else {
             pr[d.class_id][rank].fp++;    // false-positive
-            fprintf(fp_file, "fp: %s\n", paths[d.image_index]);
+//            fprintf(fp_file, "fp: %s\n", paths[d.image_index]);
         }
 
         for (i = 0; i < classes; ++i) {
@@ -458,7 +499,7 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
 
         printf("class_id =%2d, name =%16s, count = (%7d/%7d), ap = %2.2f%%   "
                "(TP = %d, FP = %d, FN = %d, precision = %2.1f%%, recall = %2.1f%%, F1 = %2.1f%%, avg_iou = %2.1f%%) \n",
-               i, names[i], truth_classes_count[i], detection_per_class_count[i], avg_precision * 100,
+               i, names[i], detection_per_class_count[i],truth_classes_count[i],  avg_precision * 100,
                tp_for_thresh_per_class[i], fp_for_thresh_per_class[i],
                truth_classes_count[i] - tp_for_thresh_per_class[i], class_precision * 100, class_recall * 100,
                2 * class_precision * class_recall / (class_precision + class_recall) * 100, avg_iou_per_class[i] * 100);
@@ -485,49 +526,26 @@ float DetectorInner::validate_detector_map(std::vector<Box> &boxes, box_label *t
     printf(" mean average precision (mAP@%0.2f) = %f, or %2.2f %% \n", iou_thresh, mean_average_precision,
            mean_average_precision * 100);
 
-    for (i = 0; i < classes; ++i) {
-        free(pr[i]);
-    }
+//    for (i = 0; i < classes; ++i) {
+//        free(pr[i]);
+//    }
     free(pr);
     free(detections);
     free(truth_classes_count);
     free(detection_per_class_count);
-
+//
     free(avg_iou_per_class);
     free(tp_for_thresh_per_class);
     free(fp_for_thresh_per_class);
-
-    fprintf(stderr, "Total Detection Time: %d Seconds\n", (int) (time(0) - start));
-    printf("\nSet -points flag:\n");
-    printf(" `-points 101` for MS COCO \n");
-    printf(" `-points 11` for PascalVOC 2007 (uncomment `difficult` in voc.data) \n");
-    printf(" `-points 0` (AUC) for ImageNet, PascalVOC 2010-2012, your custom dataset\n");
+;
     if (reinforcement_fd != NULL) fclose(reinforcement_fd);
 
-    // free memory
-//    free_ptrs((void **) names, net.layers[net.n - 1].classes);
-//    free_list_contents_kvp(options);
-//    free_list(options);
-
-//    if (existing_net) {
-//        //set_batch_network(&net, initial_batch);
-//        //free_network_recurrent_state(*existing_net);
-//        restore_network_recurrent_state(*existing_net);
-//        //randomize_network_recurrent_state(*existing_net);
-//    }
-//    else {
-//        free_network(net);
-//    }
-//    if (val) free(val);
-//    if (val_resized) free(val_resized);
-//    if (thr) free(thr);
-//    if (buf) free(buf);
-//    if (buf_resized) free(buf_resized);
 
 //    fclose(fp_file);
 //    fclose(fn_file);
 
     return mean_average_precision;
+//    return 0;
 }
 
 void Display(const std::string name, const std::vector<Box> &boxes, const cv::Mat &image) {

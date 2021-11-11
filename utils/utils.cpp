@@ -14,6 +14,7 @@ struct Box
     int label;
     float prob;
 };
+
 typedef struct detection{
     Box bbox;
     int classes;
@@ -147,9 +148,9 @@ void replace_image_to_label(const char* input_path, char* output_path)
     find_replace(output_path, "/images/val2014/", "/labels/val2014/", output_path);        // COCO
 
     find_replace(output_path, "\\JPEGImages\\", "\\labels\\", output_path);    // PascalVOC
-    //find_replace(output_path, "/images/", "/labels/", output_path);    // COCO
-    //find_replace(output_path, "/VOC2007/JPEGImages/", "/VOC2007/labels/", output_path);        // PascalVOC
-    //find_replace(output_path, "/VOC2012/JPEGImages/", "/VOC2012/labels/", output_path);        // PascalVOC
+    find_replace(output_path, "/images/", "/labels/", output_path);    // COCO
+    find_replace(output_path, "/VOC2007/JPEGImages/", "/VOC2007/labels/", output_path);        // PascalVOC
+    find_replace(output_path, "/VOC2012/JPEGImages/", "/VOC2012/labels/", output_path);        // PascalVOC
 
     if (!strcmp(input_path, output_path))
     {
@@ -182,8 +183,6 @@ void replace_image_to_label(const char* input_path, char* output_path)
         fprintf(stderr, "Label file name is too short: %s \n", output_path);
     }
 }
-
-
 
 
 void *xmalloc(size_t size) {

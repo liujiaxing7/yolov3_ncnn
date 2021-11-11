@@ -50,13 +50,13 @@ int main(int argc, char** argv)
             return -1;
         }
 
-        std::vector<Box> box;
+        std::vector<box_prob> box;
         detector->GetDetectorResult(m,box);
 
         int nums_labels=0;
         box_label * truth=read_boxes(labelpath,&nums_labels);
 
-        detector->validate_detector_map(box,truth,0.5,0.5,0);
+        detector->validate_detector_map(box, truth, &nums_labels, 0.5, 0.05, 0);
         printf(" ");
 
 

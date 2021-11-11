@@ -23,11 +23,17 @@
 #include "utils.h"
 struct Box
 {
-    cv::Rect_<float> rect;
-    int label;
-    float prob;
+//    cv::Rect_<float> rect;
+    float x, y, w, h;
 };
-
+typedef struct {
+    Box b;
+    float p;
+    int class_id;
+    int image_index;
+    int truth_flag;
+    int unique_truth_index;
+} box_prob;
 
 
 class Detector
@@ -50,9 +56,9 @@ public:
      */
     virtual bool Init() = 0;
 
-    virtual bool GetDetectorResult(const cv::Mat &image, std::vector<Box> &boxes) = 0;
+    virtual bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes) = 0;
 
-    virtual float validate_detector_map(std::vector<Box> &boxes,box_label * truth, float thresh_calc_avg_iou, const float iou_thresh, int map_points)= 0;
+    virtual float validate_detector_map(std::vector<box_prob> &boxes,box_label * truth,int *nums_labels, float thresh_calc_avg_iou, const float iou_thresh, int map_points)= 0;
 
 
 };
