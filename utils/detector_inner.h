@@ -3,10 +3,7 @@
 
 #include "detector.h"
 #include "utils.h"
-struct detection;
-typedef struct detection detection;
-int detections_comparator(const void *pa, const void *pb);
-void free_detections(detection *dets, int n);
+
 class DetectorInner : public Detector {
 public:
     DetectorInner();
@@ -17,12 +14,6 @@ public:
 
     bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes,char *labelpath);
 
-    float
-    validate_detector_map(std::vector<std::vector<box_prob>> &boxes, std::vector<std::vector<box_label>> &truth1, float thresh_calc_avg_iou, const float iou_thresh,
-                          int map_points);
-
-private:
-    void Display(const std::string name, const std::vector<Box> &boxInfos, const cv::Mat &image) const;
 
 
 };

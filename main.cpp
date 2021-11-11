@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include "utils/validate.h"
 #include "utils/detector.h"
 #include "utils/detector_inner.h"
 #include "utils/utils.h"
@@ -12,6 +12,8 @@
 #endif
 #include <stdio.h>
 #include <vector>
+
+//#include "utils/validate.h"
 
 int main(int argc, char** argv)
 {
@@ -81,7 +83,7 @@ int main(int argc, char** argv)
         truth_all.push_back(truth);
 
     }
-    detector->validate_detector_map(boxes, truth_all, 0.5, 0.5, 0);
+    float map= validate_detector_map(boxes, truth_all, 0.5, 0.5, 0);
 
     return 0;
 }

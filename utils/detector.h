@@ -21,7 +21,6 @@
 #include <vector>
 #include "opencv2/opencv.hpp"
 #include "utils.h"
-
 struct Box
 {
 //    cv::Rect_<float> rect;
@@ -45,8 +44,7 @@ public:
     virtual ~Detector()
     {}
 
-    struct detection;
-    typedef struct detection detection;
+
     /**
      * @brief init the deep learning model
      * @param[in] detectParam : module param about config and so on
@@ -58,7 +56,7 @@ public:
 
     virtual bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes, char *labelpath) = 0;
 
-    virtual float validate_detector_map(std::vector<std::vector<box_prob>> &boxes,std::vector<std::vector<box_label>> &truth1, float thresh_calc_avg_iou, const float iou_thresh, int map_points)= 0;
+
 
 
 };

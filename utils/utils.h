@@ -44,6 +44,7 @@ void malloc_error();
 void calloc_error();
 void realloc_error();
 void find_replace(const char* str, char* orig, char* rep, char* output);
+
 std::string getCurrentExePath();
 std::string getCurrentExeName();
 
