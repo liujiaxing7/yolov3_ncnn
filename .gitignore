@@ -6,6 +6,8 @@ build*/
 
 # Prerequisites
 *.d
+*.param
+*.bin
 
 # Compiled Object files
 *.slo
