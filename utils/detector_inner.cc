@@ -101,7 +101,7 @@ bool DetectorInner::Init() {
     return true;
 }
 
-bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes) {
+bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes,char *labelpath) {
 //    std::cout << "detect run." << std::endl;
 //    clock_t load_start, load_end;
 //
@@ -151,6 +151,7 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<box_prob
 
         box_prob box;
         box.class_id = 0;
+        box.image_index=*labelpath;
         box.p = values[1];
 //      box.b.x = values[2] * img_w;
 //      box.b.y = values[3] * img_h;
@@ -192,7 +193,7 @@ int detections_comparator(const void *pa, const void *pb) {
 //    free(dets);
 //}
 
-float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_label *truth1,int *nums_labels, float thresh_calc_avg_iou,
+float DetectorInner::validate_detector_map(std::vector<std::vector<box_prob>> &boxes_all, box_label *truth1,int *nums_labels, float thresh_calc_avg_iou,
                                            const float iou_thresh, int map_points) {
 
     FILE *reinforcement_fd = NULL;
@@ -202,18 +203,18 @@ float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_lab
 //    char **names = get_labels_custom(name_list, &names_size);
 //    char **names = get_labels_custom(name_list, &names_size);
     static const char* names[] = {
-        "person", "escalator", "escalator_handrails", "person_dummy","adad","asdad"
+        "person", "escalator", "escalator_handrails", "person_dummy","5","6"
 
     };
     //定义一些超参数和阈值
     int classes = 6;
 
-    int m =  boxes.size();
+    int m =  boxes_all.size();
 //    int m= std::count(boxes.begin(),boxes.end());
     int i0 = 0;
     int t;
 
-    const float thresh = .005;
+    const float thresh = .25;
     const float nms = .45;
     //const float iou_thresh = 0.5;
 
@@ -226,7 +227,7 @@ float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_lab
     int c = 3;
 //    letter_box = net.letter_box;
 //    if (letter_box) args.type = LETTERBOX_DATA;
-//    else args.type = IMAGE_DATA;*/
+//    else args.type = IMAGE_DATA;
 
     //const float thresh_calc_avg_iou = 0.24;
     float avg_iou = 0;
@@ -247,104 +248,102 @@ float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_lab
     int *fp_for_thresh_per_class = (int *) xcalloc(classes, sizeof(int));
     char **file_paths = (char **) xcalloc(m, 100);
 
-    time_t start = time(0);
-//    for (int i = nthreads; i < m + nthreads; i += nthreads) {
-//        fprintf(stderr, "\r\033[k%d", i);
+    for (int i1 = 0; i1 < m ; i1 ++) {
+
+
+        std::vector<box_prob> boxes = boxes_all[i1];
+        nums_labels= reinterpret_cast<int *>(boxes.size());
+
+//            if (l.embedding_size) set_track_id(dets, nboxes, thresh, l.sim_thresh, l.track_ciou_norm, l.track_history_size, l.dets_for_track, l.dets_for_show);
 //
-//        for (t = 0; t < nthreads && i + t - nthreads < m; ++t) {
-//            const int image_index = i + t - nthreads;
-//            std::cout<<"hello"<<std::endl;
-//
-//        }}
-
-//            detections = boxes;
-
-            //if (l.embedding_size) set_track_id(dets, nboxes, thresh, l.sim_thresh, l.track_ciou_norm, l.track_history_size, l.dets_for_track, l.dets_for_show);
-
 //            char labelpath[4096];
 //            replace_image_to_label(path, labelpath);
 //            int num_labels = 0;
-            //得到真实标签
-            box_label *truth = truth1;
+//得到真实标签
+        char labelpath=boxes;
 
-            int j;
-            for (j = 0; j < *nums_labels; ++j) {
-                truth_classes_count[truth[j].id]++;
-            }
-            const int checkpoint_detections_count = detections_count;
+        box_label *truth=read_boxes(labelpath,&nums_labels);
+//         = truth1;
 
-            int i;
-            for (i = 0; i < m; ++i) {
-                int class_id;
-                for (class_id = 0; class_id < classes; ++class_id) {
-                    float prob = boxes[i].p;
-                    if (prob > 0 && boxes[i].class_id==class_id) {
-                        detections_count++;
-                        detections = (box_prob *) xrealloc(detections, detections_count * sizeof(box_prob));
-                        detections[detections_count - 1].b = boxes[i].b;
-                        detections[detections_count - 1].p = prob;
-                        detections[detections_count - 1].image_index = 0;
-                        detections[detections_count - 1].class_id = class_id;
-                        detections[detections_count - 1].truth_flag = 0;
-                        detections[detections_count - 1].unique_truth_index = -1;
+        int j;
+        for (j = 0; j < *nums_labels; ++j) {
+            truth_classes_count[truth[j].id]++;
+        }
+        const int checkpoint_detections_count = detections_count;
 
-                        int truth_index = -1;
-                        float max_iou = 0;
-                        for (j = 0; j < *nums_labels; ++j) {
-                            Box t = {truth[j].x, truth[j].y, truth[j].w, truth[j].h};
-                            //printf(" IoU = %f, prob = %f, class_id = %d, truth[j].id = %d \n",
-                            //    box_iou(dets[i].bbox, t), prob, class_id, truth[j].id);
-                            float current_iou = box_iou(boxes[i].b, t);
-                            if (current_iou > iou_thresh && class_id == truth[j].id) {
-                                if (current_iou > max_iou) {
-                                    max_iou = current_iou;
-                                    truth_index = unique_truth_count + j;
-                                }
+        int i;
+//        for (i = 0; i < m; ++i) {
+            int class_id;
+            for (class_id = 0; class_id < classes; ++class_id) {
+                float prob = boxes[i].p;
+                if (prob > 0 && boxes[i].class_id == class_id) {
+                    detections_count++;
+                    detections = (box_prob *) xrealloc(detections, detections_count * sizeof(box_prob));
+                    detections[detections_count - 1].b = boxes[i].b;
+                    detections[detections_count - 1].p = prob;
+                    detections[detections_count - 1].image_index = 0;
+                    detections[detections_count - 1].class_id = class_id;
+                    detections[detections_count - 1].truth_flag = 0;
+                    detections[detections_count - 1].unique_truth_index = -1;
+
+                    int truth_index = -1;
+                    float max_iou = 0;
+                    for (j = 0; j < *nums_labels; ++j) {
+                        Box t = {truth[j].x, truth[j].y, truth[j].w, truth[j].h};
+                        //printf(" IoU = %f, prob = %f, class_id = %d, truth[j].id = %d \n",
+                        //    box_iou(dets[i].bbox, t), prob, class_id, truth[j].id);
+                        float current_iou = box_iou(boxes[i].b, t);
+                        if (current_iou > iou_thresh && class_id == truth[j].id) {
+                            if (current_iou > max_iou) {
+                                max_iou = current_iou;
+                                truth_index = unique_truth_count + j;
                             }
                         }
-
-                        // best IoU
-                        if (truth_index > -1) {
-                            detections[detections_count - 1].truth_flag = 1;
-                            detections[detections_count - 1].unique_truth_index = truth_index;
-                        }
-
-                        // calc avg IoU, true-positives, false-positives for required Threshold
-                        if (prob > thresh_calc_avg_iou) {
-                            int z, found = 0;
-                            for (z = checkpoint_detections_count; z < detections_count - 1; ++z) {
-                                if (detections[z].unique_truth_index == truth_index) {
-                                    found = 1;
-                                    break;
-                                }
-                            }
-
-                            if (truth_index > -1 && found == 0) {
-                                avg_iou += max_iou;
-                                ++tp_for_thresh;
-                                avg_iou_per_class[class_id] += max_iou;
-                                tp_for_thresh_per_class[class_id]++;
-                            } else {
-                                fp_for_thresh++;
-                                fp_for_thresh_per_class[class_id]++;
-                            }
-                        }}
-
                     }
 
+                    // best IoU
+                    if (truth_index > -1) {
+                        detections[detections_count - 1].truth_flag = 1;
+                        detections[detections_count - 1].unique_truth_index = truth_index;
+                    }
+
+                    // calc avg IoU, true-positives, false-positives for required Threshold
+                    if (prob > thresh_calc_avg_iou) {
+                        int z, found = 0;
+                        for (z = checkpoint_detections_count; z < detections_count - 1; ++z) {
+                            if (detections[z].unique_truth_index == truth_index) {
+                                found = 1;
+                                break;
+                            }
+                        }
+
+                        if (truth_index > -1 && found == 0) {
+                            avg_iou += max_iou;
+                            ++tp_for_thresh;
+                            avg_iou_per_class[class_id] += max_iou;
+                            tp_for_thresh_per_class[class_id]++;
+                        } else {
+                            fp_for_thresh++;
+                            fp_for_thresh_per_class[class_id]++;
+                        }
+                    }
+                }
+
             }
 
+//        }
 
-            unique_truth_count += *nums_labels;
 
-            //static int previous_errors = 0;
-            //int total_errors = fp_for_thresh + (unique_truth_count - tp_for_thresh);
-            //int errors_in_this_image = total_errors - previous_errors;
-            //previous_errors = total_errors;
-            //if(reinforcement_fd == NULL) reinforcement_fd = fopen("reinforcement.txt", "wb");
-            //char buff[1000];
-            //sprintf(buff, "%s\n", path);
-            //if(errors_in_this_image > 0) fwrite(buff, sizeof(char), strlen(buff), reinforcement_fd);
+        unique_truth_count += *nums_labels;
+
+        //static int previous_errors = 0;
+        //int total_errors = fp_for_thresh + (unique_truth_count - tp_for_thresh);
+        //int errors_in_this_image = total_errors - previous_errors;
+        //previous_errors = total_errors;
+        //if(reinforcement_fd == NULL) reinforcement_fd = fopen("reinforcement.txt", "wb");
+        //char buff[1000];
+        //sprintf(buff, "%s\n", path);
+        //if(errors_in_this_image > 0) fwrite(buff, sizeof(char), strlen(buff), reinforcement_fd);
 
 //            free_detections(dets, m);
 //            free(id);
@@ -353,9 +352,10 @@ float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_lab
 
 
 
-    //for (t = 0; t < nthreads; ++t) {
-    //    pthread_join(thr[t], 0);
-    //}
+        //for (t = 0; t < nthreads; ++t) {
+        //    pthread_join(thr[t], 0);
+        //}
+    }
 
     if ((tp_for_thresh + fp_for_thresh) > 0)
         avg_iou = avg_iou / (tp_for_thresh + fp_for_thresh);
@@ -378,6 +378,7 @@ float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_lab
 
     // for PR-curve
     pr_t **pr = (pr_t **) xcalloc(classes, sizeof(pr_t *));
+    int i;
     for (i = 0; i < classes; ++i) {
         pr[i] = (pr_t *) xcalloc(detections_count, sizeof(pr_t));
     }
@@ -543,6 +544,7 @@ float DetectorInner::validate_detector_map(std::vector<box_prob> &boxes, box_lab
 
 //    fclose(fp_file);
 //    fclose(fn_file);
+//
 
     return mean_average_precision;
 //    return 0;

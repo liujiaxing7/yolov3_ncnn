@@ -33,7 +33,12 @@ int main(int argc, char** argv)
     ReadFile(imagesTxt, imageNameList);
     const size_t size = imageNameList.size();
 
-    std::vector<Box> boxes;
+    std::vector<std::vector<box_prob>> boxes;
+    
+    int count1=0;
+    box_label* truth_all = (box_label*)xcalloc(1, sizeof(box_label));
+    box_label * truth;
+    int nums_labels;
     for (size_t i = 0; i < size; ++i) {
 
         auto imageName = imageNameList.at(i);
@@ -51,13 +56,30 @@ int main(int argc, char** argv)
         }
 
         std::vector<box_prob> box;
-        detector->GetDetectorResult(m,box);
+        detector->GetDetectorResult(m,box,labelpath);
+        boxes.push_back(box);
 
-        int nums_labels=0;
-        box_label * truth=read_boxes(labelpath,&nums_labels);
+        nums_labels=0;
+        truth=read_boxes(labelpath,&nums_labels);
 
-        detector->validate_detector_map(box, truth, &nums_labels, 0.5, 0.05, 0);
-        printf(" ");
+        for(int i=0;i< nums_labels;++i){
+            truth_all= (box_label*)xrealloc(truth_all, (count1+ 1) * sizeof(box_label));
+
+            truth_all[count1].track_id = count1 + 0;
+            //printf(" boxes[count1].track_id = %d, count1 = %d \n", boxes[count1].track_id, count1);
+            truth_all[count1].id = truth[i].id;
+            truth_all[count1].x = truth[i].x;
+            truth_all[count1].y = truth[i].y;
+            truth_all[count1].h = truth[i].h;
+            truth_all[count1].w = truth[i].w;
+            truth_all[count1].left   = truth[i].x - truth[i].w/2;
+            truth_all[count1].right  = truth[i].x + truth[i].w/2;
+            truth_all[count1].top    = truth[i].y - truth[i].h/2;
+            truth_all[count1].bottom = truth[i].y + truth[i].h/2;
+
+            ++count1;
+            
+        }
 
 
 //        detect_yolov3(m, objects);
@@ -66,6 +88,8 @@ int main(int argc, char** argv)
 
 //        draw_objects(m, objects);
     }
+    detector->validate_detector_map(boxes, truth, &nums_labels, 0.5, 0.25, 0);
+    printf(" ");
 
     return 0;
 }

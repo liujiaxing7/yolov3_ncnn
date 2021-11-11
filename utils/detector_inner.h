@@ -15,10 +15,10 @@ public:
 
     bool Init();
 
-    bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes);
+    bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes,char *labelpath);
 
     float
-    validate_detector_map(std::vector<box_prob> &boxes, box_label *truth,int *nums_labels, float thresh_calc_avg_iou, const float iou_thresh,
+    validate_detector_map(std::vector<std::vector<box_prob>> &boxes, box_label *truth,int *nums_labels, float thresh_calc_avg_iou, const float iou_thresh,
                           int map_points);
 
 private:
