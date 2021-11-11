@@ -32,7 +32,7 @@ void ReadFilesFromDir(const std::string &path_to_dir
 
 void ReadFile(std::string srcFile, std::vector<std::string> &image_files);
 
-box_label *read_boxes(char *filename, int *n);
+bool read_boxes(char *filename, int *n, std::vector<box_label> *truth);
 void replace_image_to_label(const char* input_path, char* output_path);
 void *xcalloc(size_t nmemb, size_t size);
 void *xmalloc(size_t size);

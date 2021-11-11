@@ -15,7 +15,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #endif
-
+#include <stdlib.h>
 #include <stdio.h>
 #include <vector>
 #include "time.h"
@@ -75,6 +75,7 @@ float box_iou(Box a, Box b)
     }
     return I / U;
 }
+
 ncnn::Net yolov3;
 
 DetectorInner::DetectorInner() {
@@ -150,17 +151,18 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<box_prob
         const float *values = out.row(i);
 
         box_prob box;
-        box.class_id = 0;
+        box.class_id = values[0]-1;
         box.image_index=*labelpath;
         box.p = values[1];
 //      box.b.x = values[2] * img_w;
 //      box.b.y = values[3] * img_h;
 //      box.b.w = values[4] * img_w - box.b.x;
 //      box.b.h = values[5] * img_h - box.b.y;
-        box.b.x = values[2] ;
-        box.b.y = values[3] ;
-        box.b.w = values[4] - box.b.x;
-        box.b.h = values[5] - box.b.y;
+
+        box.b.w = values[4] -values[2];
+        box.b.h = values[5] - values[3];
+        box.b.x =  (values[2]+box.b.w+values[2])/2.0;
+        box.b.y = (values[3]+box.b.h+values[3])/2.0 ;
 
         boxes.push_back(box);
     }
@@ -193,7 +195,7 @@ int detections_comparator(const void *pa, const void *pb) {
 //    free(dets);
 //}
 
-float DetectorInner::validate_detector_map(std::vector<std::vector<box_prob>> &boxes_all, box_label *truth1,int *nums_labels, float thresh_calc_avg_iou,
+float DetectorInner::validate_detector_map(std::vector<std::vector<box_prob>> &boxes_all, std::vector<std::vector<box_label>> &truth1, float thresh_calc_avg_iou,
                                            const float iou_thresh, int map_points) {
 
     FILE *reinforcement_fd = NULL;
@@ -252,27 +254,21 @@ float DetectorInner::validate_detector_map(std::vector<std::vector<box_prob>> &b
 
 
         std::vector<box_prob> boxes = boxes_all[i1];
-        nums_labels= reinterpret_cast<int *>(boxes.size());
+        int nums_prob=boxes.size();
 
-//            if (l.embedding_size) set_track_id(dets, nboxes, thresh, l.sim_thresh, l.track_ciou_norm, l.track_history_size, l.dets_for_track, l.dets_for_show);
-//
-//            char labelpath[4096];
-//            replace_image_to_label(path, labelpath);
-//            int num_labels = 0;
-//得到真实标签
-        char labelpath=boxes;
+        std::vector<box_label> truth= truth1[i1];
 
-        box_label *truth=read_boxes(labelpath,&nums_labels);
+        int nums_labels= truth.size();
 //         = truth1;
 
         int j;
-        for (j = 0; j < *nums_labels; ++j) {
+        for (j = 0; j < nums_labels; ++j) {
             truth_classes_count[truth[j].id]++;
         }
         const int checkpoint_detections_count = detections_count;
 
         int i;
-//        for (i = 0; i < m; ++i) {
+        for (i = 0; i < nums_prob; ++i) {
             int class_id;
             for (class_id = 0; class_id < classes; ++class_id) {
                 float prob = boxes[i].p;
@@ -288,13 +284,16 @@ float DetectorInner::validate_detector_map(std::vector<std::vector<box_prob>> &b
 
                     int truth_index = -1;
                     float max_iou = 0;
-                    for (j = 0; j < *nums_labels; ++j) {
+                    for (j = 0; j < nums_labels; ++j) {
                         Box t = {truth[j].x, truth[j].y, truth[j].w, truth[j].h};
                         //printf(" IoU = %f, prob = %f, class_id = %d, truth[j].id = %d \n",
                         //    box_iou(dets[i].bbox, t), prob, class_id, truth[j].id);
                         float current_iou = box_iou(boxes[i].b, t);
+//                        printf("iou: %f \n",current_iou);
                         if (current_iou > iou_thresh && class_id == truth[j].id) {
+//                            printf("66666666");
                             if (current_iou > max_iou) {
+
                                 max_iou = current_iou;
                                 truth_index = unique_truth_count + j;
                             }
@@ -331,10 +330,10 @@ float DetectorInner::validate_detector_map(std::vector<std::vector<box_prob>> &b
 
             }
 
-//        }
+        }
 
 
-        unique_truth_count += *nums_labels;
+        unique_truth_count += nums_labels;
 
         //static int previous_errors = 0;
         //int total_errors = fp_for_thresh + (unique_truth_count - tp_for_thresh);

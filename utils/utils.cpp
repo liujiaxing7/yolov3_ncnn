@@ -88,25 +88,14 @@ void ReadFile(std::string srcFile, std::vector<std::string> &image_files)
     fin.close();
 }
 
-box_label *read_boxes(char *filename, int *n)
+bool read_boxes(char *filename, int *n, std::vector<box_label> *truth)
 {
-    box_label* boxes = (box_label*)xcalloc(1, sizeof(box_label));
+//    box_label* boxes = (box_label*)xcalloc(1, sizeof(box_label));
+
     FILE *file = fopen(filename, "r");
     if (!file) {
         printf("Can't open label file. (This can be normal only if you use MSCOCO): %s \n", filename);
-        //file_error(filename);
-        FILE* fw = fopen("bad.list", "a");
-        fwrite(filename, sizeof(char), strlen(filename), fw);
-        char *new_line = "\n";
-        fwrite(new_line, sizeof(char), strlen(new_line), fw);
-        fclose(fw);
-        if (0) {
-            printf("\n Error in read_boxes() \n");
-            getchar();
-        }
 
-        *n = 0;
-        return boxes;
     }
     const int max_obj_img = 4000;// 30000;
     const int img_hash = (custom_hash(filename) % max_obj_img)*max_obj_img;
@@ -115,70 +104,73 @@ box_label *read_boxes(char *filename, int *n)
     int id;
     int count = 0;
     while(fscanf(file, "%d %f %f %f %f", &id, &x, &y, &w, &h) == 5){
-        boxes = (box_label*)xrealloc(boxes, (count + 1) * sizeof(box_label));
-        boxes[count].track_id = count + img_hash;
+        box_label t;
+//        boxes = (box_label*)xrealloc(boxes, (count + 1) * sizeof(box_label));
+        t.track_id = count + img_hash;
         //printf(" boxes[count].track_id = %d, count = %d \n", boxes[count].track_id, count);
-        boxes[count].id = id;
-        boxes[count].x = x;
-        boxes[count].y = y;
-        boxes[count].h = h;
-        boxes[count].w = w;
-        boxes[count].left   = x - w/2;
-        boxes[count].right  = x + w/2;
-        boxes[count].top    = y - h/2;
-        boxes[count].bottom = y + h/2;
+        t.id = id;
+        t.x = x;
+        t.y = y;
+        t.h = h;
+        t.w = w;
+        t.left   = x - w/2;
+        t.right  = x + w/2;
+        t.top    = y - h/2;
+        t.bottom = y + h/2;
+
+        truth->push_back(t);
         ++count;
     }
     fclose(file);
     *n = count;
-    return boxes;
+    return 0;
 }
 
-box_label *read_boxes1(char *filename, int *n)
-{
-    box_label* boxes = (box_label*)xcalloc(1, sizeof(box_label));
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        printf("Can't open label file. (This can be normal only if you use MSCOCO): %s \n", filename);
-        //file_error(filename);
-        FILE* fw = fopen("bad.list", "a");
-        fwrite(filename, sizeof(char), strlen(filename), fw);
-        char *new_line = "\n";
-        fwrite(new_line, sizeof(char), strlen(new_line), fw);
-        fclose(fw);
-        if (0) {
-            printf("\n Error in read_boxes() \n");
-            getchar();
-        }
-
-        *n = 0;
-        return boxes;
-    }
-    const int max_obj_img = 4000;// 30000;
-    const int img_hash = (custom_hash(filename) % max_obj_img)*max_obj_img;
-    //printf(" img_hash = %d, filename = %s; ", img_hash, filename);
-    float x, y, h, w;
-    int id;
-    int count = 0;
-    while(fscanf(file, "%d %f %f %f %f", &id, &x, &y, &w, &h) == 5){
-        boxes = (box_label*)xrealloc(boxes, (count + 1) * sizeof(box_label));
-        boxes[count].track_id = count + img_hash;
-        //printf(" boxes[count].track_id = %d, count = %d \n", boxes[count].track_id, count);
-        boxes[count].id = id;
-        boxes[count].x = x;
-        boxes[count].y = y;
-        boxes[count].h = h;
-        boxes[count].w = w;
-        boxes[count].left   = x - w/2;
-        boxes[count].right  = x + w/2;
-        boxes[count].top    = y - h/2;
-        boxes[count].bottom = y + h/2;
-        ++count;
-    }
-    fclose(file);
-    *n = count;
-    return boxes;
-}
+//box_label *read_boxes1(char *filename, int *n)
+//{
+//    box_label* boxes = (box_label*)xcalloc(1, sizeof(box_label));
+//    FILE *file = fopen(filename, "r");
+//    if (!file) {
+//        printf("Can't open label file. (This can be normal only if you use MSCOCO): %s \n", filename);
+//        //file_error(filename);
+//        FILE* fw = fopen("bad.list", "a");
+//        fwrite(filename, sizeof(char), strlen(filename), fw);
+//        char *new_line = "\n";
+//        fwrite(new_line, sizeof(char), strlen(new_line), fw);
+//        fclose(fw);
+//        if (0) {
+//            printf("\n Error in read_boxes() \n");
+//            getchar();
+//        }
+//
+//        *n = 0;
+//        return boxes;
+//    }
+//    const int max_obj_img = 4000;// 30000;
+//    const int img_hash = (custom_hash(filename) % max_obj_img)*max_obj_img;
+//    //printf(" img_hash = %d, filename = %s; ", img_hash, filename);
+//    float x, y, h, w;
+//    int id;
+//    int count = 0;
+//    while(fscanf(file, "%d %f %f %f %f", &id, &x, &y, &w, &h) == 5){
+//        boxes = (box_label*)xrealloc(boxes, (count + 1) * sizeof(box_label));
+//        boxes[count].track_id = count + img_hash;
+//        //printf(" boxes[count].track_id = %d, count = %d \n", boxes[count].track_id, count);
+//        boxes[count].id = id;
+//        boxes[count].x = x;
+//        boxes[count].y = y;
+//        boxes[count].h = h;
+//        boxes[count].w = w;
+//        boxes[count].left   = x - w/2;
+//        boxes[count].right  = x + w/2;
+//        boxes[count].top    = y - h/2;
+//        boxes[count].bottom = y + h/2;
+//        ++count;
+//    }
+//    fclose(file);
+//    *n = count;
+//    return boxes;
+//}
 
 void replace_image_to_label(const char* input_path, char* output_path)
 {
