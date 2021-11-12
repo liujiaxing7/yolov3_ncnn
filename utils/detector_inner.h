@@ -12,9 +12,9 @@ public:
 
     bool Init();
 
-    bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes,char *labelpath);
-
+    bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes, char *labelpath);
 
 
 };
+
 #endif

@@ -4,6 +4,7 @@
 
 #ifndef DETECTOR_SAMPLE_UTILS_H
 #define DETECTOR_SAMPLE_UTILS_H
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -27,25 +28,36 @@ typedef struct box_label {
     float left, right, top, bottom;
 } box_label;
 
-void ReadFilesFromDir(const std::string &path_to_dir
-                      , std::vector<std::string> *image_name_list);
+void ReadFilesFromDir(const std::string &path_to_dir, std::vector<std::string> *image_name_list);
 
 void ReadFile(std::string srcFile, std::vector<std::string> &image_files);
 
 bool read_boxes(char *filename, int *n, std::vector<box_label> *truth);
-void replace_image_to_label(const char* input_path, char* output_path);
+
+void replace_image_to_label(const char *input_path, char *output_path);
+
 void *xcalloc(size_t nmemb, size_t size);
+
 void *xmalloc(size_t size);
+
 void trim(char *str);
+
 unsigned long custom_hash(char *str);
+
 void *xrealloc(void *ptr, size_t size);
+
 void find_replace_extension(char *str, char *orig, char *rep, char *output);
+
 void malloc_error();
+
 void calloc_error();
+
 void realloc_error();
-void find_replace(const char* str, char* orig, char* rep, char* output);
+
+void find_replace(const char *str, char *orig, char *rep, char *output);
 
 std::string getCurrentExePath();
+
 std::string getCurrentExeName();
 
 

@@ -14,9 +14,11 @@
 #if defined(USE_NCNN_SIMPLEOCV)
 #include "simpleocv.h"
 #else
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+
 #endif
 
 #include <stdlib.h>
@@ -95,9 +97,9 @@ int detections_comparator(const void *pa, const void *pb) {
 //    free(dets);
 //}
 
-float validate_detector_map(std::vector<std::vector<box_prob>> &boxes_all,
-                                           std::vector<std::vector<box_label>> &truth1, float thresh_calc_avg_iou,
-                                           const float iou_thresh, int map_points) {
+void validate_detector_map(std::vector<std::vector<box_prob>> &boxes_all,
+                            std::vector<std::vector<box_label>> &truth1, float thresh_calc_avg_iou,
+                            const float iou_thresh, int map_points) {
 
     FILE *reinforcement_fd = NULL;
 
@@ -445,6 +447,6 @@ float validate_detector_map(std::vector<std::vector<box_prob>> &boxes_all,
 //    fclose(fn_file);
 //
 
-    return mean_average_precision;
+//    return mean_average_precision;
 //    return 0;
 }

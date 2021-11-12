@@ -32,7 +32,7 @@ int detections_comparator(const void *pa, const void *pb);
 
 void free_detections(detection *dets, int n);
 
-float validate_detector_map(std::vector<std::vector<box_prob>> &boxes, std::vector<std::vector<box_label>> &truth1,
+void validate_detector_map(std::vector<std::vector<box_prob>> &boxes, std::vector<std::vector<box_label>> &truth1,
                             float thresh_calc_avg_iou, const float iou_thresh,
                             int map_points);
 //class validate {

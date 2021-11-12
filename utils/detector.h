@@ -21,8 +21,8 @@
 #include <vector>
 #include "opencv2/opencv.hpp"
 #include "utils.h"
-struct Box
-{
+
+struct Box {
 //    cv::Rect_<float> rect;
     float x, y, w, h;
 };
@@ -35,14 +35,11 @@ typedef struct {
     int unique_truth_index;
 } box_prob;
 
-class Detector
-{
+class Detector {
 public:
-    Detector()
-    {}
+    Detector() {}
 
-    virtual ~Detector()
-    {}
+    virtual ~Detector() {}
 
 
     /**
@@ -55,8 +52,6 @@ public:
     virtual bool Init() = 0;
 
     virtual bool GetDetectorResult(const cv::Mat &image, std::vector<box_prob> &boxes, char *labelpath) = 0;
-
-
 
 
 };

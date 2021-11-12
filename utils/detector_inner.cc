@@ -115,6 +115,7 @@ bool DetectorInner::GetDetectorResult(const cv::Mat &image, std::vector<box_prob
 
     return true;
 }
+
 void Display(const std::string name, const std::vector<Box> &boxes, const cv::Mat &image) {
 
 }
